@@ -40,7 +40,7 @@ Just simple nagios host/service/etc definition.
 Install `do_config_l.php` under `scripts` folder of nagiosQL's DocumentRoot. And it ready for usage :-)
 
 ####WARNING,WARNING,WARNING#####
-	The `do_config_l.php` script does not have any autentification or protection and may prevent you security 
+	The `do_config_l.php` script does not have any authentication or protection and may break your security
 	YOU MUST PROTECT IT BY .httaccess OR SOMETHING ELSE.
 
 ####add_host_to_nagiosQL.sh####
