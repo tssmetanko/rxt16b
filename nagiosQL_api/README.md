@@ -1,9 +1,10 @@
 nagiosQL API
 ======
+The nagiosQL API provides interface to manage nagiosQL remotely via http POST and GET requests
 
 ####do_config_l.php####
 
-The nagiosQL API provides interface to manage nagiosQL via http POST and GET requests. Basically nagiosQL do not have this feature, it have only local command line interface.
+Basically nagiosQL do not have feature for remote management via API, it have only local command line interface.
 The PHP script "scripts/do_config_l.php" based on the "scripts/do_config.php" and provides features for remote managing of nagiosQL.
 
 You can use this like in BASH block follow
