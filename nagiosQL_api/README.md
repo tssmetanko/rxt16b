@@ -7,6 +7,8 @@ The nagiosQL API provides interface to manage nagiosQL remotely via http POST an
 Basically nagiosQL do not have feature for remote management via API, it have only local command line interface.
 The PHP script "scripts/do_config_l.php" based on the "scripts/do_config.php" and provides features for remote managing of nagiosQL.
 
+###### Usage ######
+
 You can use this like in BASH block follow
 ```
 #------------------------------------------------------
@@ -29,13 +31,15 @@ define host {
         address                         ${IP_ADDR}
         use                             nrpe-host
       	contacts                        null
-	      contact_groups                  null
-	      notifications_enabled		        0
+	contact_groups                  null
+	notifications_enabled		        0
         register                        1
 }
 #------------------------------------------------------
 ```
 Just simple nagios host/service/etc definition.
+
+######Installation######
 
 Install `do_config_l.php` under `scripts` folder of nagiosQL's DocumentRoot. And it ready for usage :-)
 
