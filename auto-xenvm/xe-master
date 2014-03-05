@@ -1,15 +1,54 @@
 #!/bin/bash
+set -x
 
+die(){
+	echo $1
+	exit 255
+}
 
-while getopts "t:m:c:n" option; do
+parse_json(){
+	JSON=$1
+	echo $JSON | grep -oP '(\w+\:(\w|[.-=+])+\,?)+' | sed -e 's/,/\n/'
+	
+}
+
+set_vm-data(){
+	param=$1
+	value=$2
+	echo -n "Setting of ${param}: "
+	[[ -z $UUID ]]&& die "UUID is not specified"
+	xe vm-param-set uuid=${UUID} xenstore-data:vm-data/${param}=$value && echo OK || die "Err"
+}
+
+create_vm(){
+	echo -n "Creating of VM ${NAME}: "
+	UUID=`xe vm-install template=${TEMPLATE} new-name-label=${NAME}`
+	[[ -n $UUID ]] && echo OK || die "Err"
+}
+
+usage(){
+	echo "I'm too lazy to write documentation today. :-)"
+}
+
+while getopts "t:m:c:d:h:" option; do
         case $option in
 		t)TEMPLATE=$OPTARG;;
 		m)MEM=$OPTARG;;
 		c)CPU=$OPTARG;;
-		n)NETWORK=$OPTARG;;
+		d)VMDATA=$OPTARG;;
+		h)NAME=$OPTARG;;
                 *)usage;;
         esac
 done
 
+[[ -z $NAME ]]&& die "Name not specified" 
+[[ -z $TEMPLATE ]]&& die "Template not specified"
 
+create_vm
+set_vm-data "hostname" ${NAME}
+for SET in $( parse_json $VMDATA ); do
+	PAR=`echo $SET | cut -d: -f1`
+	VAL=`echo $SET | cut -d: -f2`
+	set_vm-data $PAR $VAL
+done
 
