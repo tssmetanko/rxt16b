@@ -1,0 +1,15 @@
+#!/bin/bash
+
+
+while getopts "t:m:c:n" option; do
+        case $option in
+		t)TEMPLATE=$OPTARG;;
+		m)MEM=$OPTARG;;
+		c)CPU=$OPTARG;;
+		n)NETWORK=$OPTARG;;
+                *)usage;;
+        esac
+done
+
+
+
