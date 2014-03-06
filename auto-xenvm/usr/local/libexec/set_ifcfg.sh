@@ -28,8 +28,22 @@ TYPE="Ethernet"
 TEMP1
 }
 
+fix_ifcfg(){
+	ifcfg_path=$1
+	echo "Check & fix $ifcfg_path"
+	sed -re "s/^DEVICE=.*$/DEVICE=${IFNAME}/" -i ${ifcfg_path}
+	sed -re "s/^HWADDR=.*$/HWADDR=${HWADDR}/" -i ${ifcfg_path}
+	sed -re "s/^IPADDR=.*$/IPADDR=${IP}/" -i ${ifcfg_path}
+}
+
 [[ -z $IFNAME ]] && die "Error, IFNAME is empty"
 [[ -z $IP ]]&& die "Error, IP is empty"
 
 HWADDR=$(get_hwaddr_by_ifname ${IFNAME})
-template > /etc/sysconfig/network-scripts/ifcfg-${IFNAME} && echo "ifcfg-${IFNAME} writen" || die "Can not complete operation"
+
+if [[ -f /etc/sysconfig/network-scripts/ifcfg-${IFNAME} ]]; then
+	fix_ifcfg /etc/sysconfig/network-scripts/ifcfg-${IFNAME}
+else
+	template > /etc/sysconfig/network-scripts/ifcfg-${IFNAME} \
+	&& echo "Create /etc/sysconfig/network-scripts/ifcfg-${IFNAME}" || die "Can not complete operation of ${IFNAME}"
+fi
