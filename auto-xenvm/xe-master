@@ -8,7 +8,7 @@ die(){
 
 parse_json(){
 	JSON=$1
-	echo $JSON | grep -oP '(\w+\:(\w|[.-=+])+\,?)+' | sed -e 's/,/\n/'
+	echo $JSON | grep -oP '(\w+\:(\w|[.-=+])+\,?)+' | sed -e 's/,/\n/g'
 	
 }
 
