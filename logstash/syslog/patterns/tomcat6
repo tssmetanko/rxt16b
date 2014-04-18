@@ -1,0 +1,10 @@
+# this file managed bt puppet. Do not edit.
+###########################################
+TOMCAT_TIMESTAMP1 %{MONTH}\s%{MONTHDAY},\s%{YEAR}\s+%{TIME}\s%{WORD}
+TOMCAT_TIMESTAMP2 %{YEAR}-%{MONTHNUM}-%{MONTHDAY}\s+%{TIME}(\s+%{TIME})?
+
+TOMCAT1 %{TOMCAT_TIMESTAMP1:timestamp}\s+%{JAVACLASS:tomcat_javaclass} %{GREEDYDATA:short_message}(\n)%{LOGLEVEL:tomcat_level}: %{GREEDYDATA:short_message}
+TOMCAT2 %{TIME:timestamp}\s+%{LOGLEVEL:tomcat_level}\s+%{WORD:tomcat_javaclass}:%{INT:tomcat_line_number}\s+-\s+%{GREEDYDATA:short_message}
+TOMCAT3 %{LOGLEVEL:tomcat_level}: %{GREEDYDATA}
+TOMCAT4 %{TOMCAT_TIMESTAMP1:timestamp}\s+%{JAVACLASS:tomcat_javaclass} %{GREEDYDATA}
+TOMCAT5 %{TOMCAT_TIMESTAMP2:timestamp}\s+%{LOGLEVEL:tomcat_level}\s%{JAVACLASS:tomcat_javaclass}:(:?%{INT:tomcat_line_number}\s-)?\s%{GREEDYDATA:short_message}

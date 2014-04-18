@@ -1,0 +1,5 @@
+# this file managed by puppet. Do not edit.
+###########################################
+
+SYSLOGCMDLINE (?:%{SYSLOGTIMESTAMP:timestamp}|%{TIMESTAMP_ISO8601:timestamp8601})\s+(?:%{SYSLOGFACILITY} )?%{SYSLOGHOST:host}\s+%{DATA:login_user}:\s+%{DATA:cmd_user}\s+\[%{INT:cmd_pid}\]:\s+%{INT:cmd_id}\s+%{GREEDYDATA:command}\s+\[%{INT:execution_code}\]
+

@@ -1,0 +1,1 @@
+POSTFIX (?:%{WORD:queue_id})?\:(?:(?:\s+from=<%{DATA:mail_from}>,?)|(?:\s+to=<%{DATA:rcpt_to}>,?)|(?:\s+relay=(?:%{IPORHOST:relay})(?:\[%{IP:relay_ip}\])?(?:\:%{INT:relay_port})?,?)|(?:\s+status=%{WORD:status})?(?:\s+\(%{DATA:queue_status}\))|.)*

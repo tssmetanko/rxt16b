@@ -1,0 +1,5 @@
+# this file managed bt puppet. Do not edit.
+###########################################
+HTTP_ERR_TIMESTAMP1 %{DAY}\s+%{SYSLOGTIMESTAMP}\s+%{YEAR}
+HTTPDTEMPLATE1 \[%{HTTP_ERR_TIMESTAMP1:timestamp}\]\s+\[%{LOGLEVEL}\]\s+\[client\s+%{IPORHOST:clientip}\]\s+%{WORD}\s+%{LOGLEVEL}:\s+%{GREEDYDATA}
+HTTPDTEMPLATE2 \[%{HTTP_ERR_TIMESTAMP1:timestamp}\]\s+\[%{LOGLEVEL}\]\s+(:\[client\s+%{IPORHOST:clientip}\]\s+)?%{GREEDYDATA}

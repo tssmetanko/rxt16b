@@ -1,0 +1,83 @@
+#!/bin/bash
+#set -x #debug
+set -u
+set -e
+
+export PATH=/sbin:/bin:/usr/sbin:/usr/bin
+
+OSTAT=/usr/local/lib/log2syslog
+PREFIX="";SYSLOG_TAG="";READ_LOG=""
+SELF_NAME="${0##*/}"
+
+trap "logger -t log2syslog \"unexpected error in ${LINENO}\"" ERR
+
+die(){
+	echo $1 >&2
+	exit 255
+}
+
+usage()
+{
+cat << EOF
+
+log2syslog
+
+Compares an offset stat file to current log state and sends new records to syslog.
+
+USAGE: /usr/local/bin/log2sylog [OPTIONS]
+
+OPTIONS:
+  -h    Show this message
+  -t    Tag for syslog
+  -f    Files for monitoring; HINT: if you use a wildcard, put the argument in double quotes.
+  -p	Adds prefix to offset file name.
+
+EXAMPLES:
+
+  /usr/local/bin/log2sylog -t tomcat6 -f /var/log/tomcat6/catalina.out
+    Sends new records of /var/log/tomcat6/catalina.out file to syslog with tomcat6 tag.
+
+  /usr/local/bin/log2sylog -t httpd -f "/var/log/httpd/*log"
+    Sends new records of all "*log" files to syslog with httpd tag.
+
+EOF
+}
+
+while getopts "t:f:h:p:" flag
+do
+	case "$flag" in
+	h)	usage
+		exit 0
+		;;
+	t)	SYSLOG_TAG=$OPTARG
+		;;
+	f)	READ_LOG=$OPTARG
+		;;
+	p)	PREFIX=$OPTARG
+		;;
+	*)	usage
+		exit 1
+		;;
+	esac
+done
+
+#Checking for script neccesary components
+which logtail 2>&1 > /dev/null || die "\'logtail\' has not been installed yet. Please install this programme."
+[[ -x "/usr/local/libexec/logger.pl" ]]|| die "\'/usr/local/libexec/logger.pl\' is unaccessible or has bad permissins"
+
+
+#Checking for another running scripts with the same options
+[[ $(ps -C ${SELF_NAME} -o args= | grep "${SELF_NAME} $*" | wc -l) -gt 2 ]] && die "${SELF_NAME} \"$*\" already running. Please wait for several seconds and try again."
+
+#Checking for neccessary resources
+[[ -z $READ_LOG ]] && die "File for monitoring has not been declared. Use flag -h to see a help message."
+[[ -d $OSTAT ]]||mkdir -p $OSTAT
+
+for logfile in $READ_LOG; do
+	logstat="${OSTAT}/${PREFIX}${logfile##*/}"
+	#IFS=$'\n'
+	#for logline in $(logtail -f ${logfile} -o ${logstat}); do
+	#	logger -t $SYSLOG_TAG $logline
+	#done 
+	logtail -f ${logfile} -o ${logstat}|/usr/local/libexec/logger.rb -t ${SYSLOG_TAG}
+done

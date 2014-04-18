@@ -1,0 +1,5 @@
+OSSEC_IPORHOST (?:\(%{IPORHOST:srchost}\)|%{IPORHOST:srchost})|((?:\(%{IPORHOST:srchost}\)|%{IPORHOST:srchost}) %{IPORHOST:srchost})
+OSSEC_TITLE \*\* Alert %{GREEDYDATA}
+OSSEC_HEAD %{YEAR} %{SYSLOGTIMESTAMP} %{OSSEC_IPORHOST}->%{GREEDYDATA:alert_source}\nRule: %{INT:rule_id} \(level %{INT:level}\) -> \'%{GREEDYDATA:alert_type}\'
+OSSEC_BODY ((?m)%{GREEDYDATA:short_message})
+OSSEC %{OSSEC_TITLE}\n%{OSSEC_HEAD}\n%{OSSEC_BODY}
