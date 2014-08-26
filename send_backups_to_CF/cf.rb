@@ -71,19 +71,17 @@ class CF
         #cf_size=cf_object.files.first.content_length unless cf_object.files.first.nil?
         cf_size=@cf_connection.head_object(@container,key)[:headers]["Content-Length"] rescue Fog::Storage::Rackspace::NotFound
         fs_size=File.open(path).size
-        puts "#{cf_size} #{fs_size}"
+        #puts "#{cf_size} #{fs_size}"
         if cf_size == fs_size.to_s then
           $LOG.info("#{path} already exists")
           return
         end
       end
+      
       large_file=true if File.size(path) > SEGMENT_LIMIT
-      #Add header for static_large_object in case the object is a large object
-      #http://rubydoc.info/gems/fog/1.23.0/Fog/Storage/Rackspace/Real:put_static_obj_manifest
-      options['X-Static-Large-Object']="#{@container}/#{key}" if large_file==true
-
+      
       File.open(path) do |file|
-
+        
         $LOG.debug("File #{path} opened") if $debug
         segment=0
         until file.eof? do
@@ -118,7 +116,10 @@ class CF
         end
       end
       if large_file then
-      #write static manifest for large file
+        #write static manifest for large file
+        #Add header for static_large_object in case the object is a large object
+        #http://rubydoc.info/gems/fog/1.23.0/Fog/Storage/Rackspace/Real:put_static_obj_manifest
+        options['X-Static-Large-Object']="#{@container}/#{key}" if large_file==true
         @cf_connection.put_static_obj_manifest(@container,key,segments,options) ? ($LOG.info("Put file #{path} to #{@container}")):()
         #@cf_connection.put_object_manifest(@container,key.sub(/^\//,''),'X-Object-Manifest' => "#{@container}/#{key.sub(/^\//,'')}")
       end
