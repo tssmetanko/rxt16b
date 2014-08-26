@@ -67,12 +67,12 @@ class CF
   
       if @sync_mode then
         #Jusr skeep existen files
-        cf_object=@cf_connection.directories.get(@container,option={:prefix=>key.sub})
-        cf_size=cf_object.files.first.content_length unless cf_object.files.first.nil?
+        #cf_object=@cf_connection.directories.get(@container,option={:prefix=>key})
+        #cf_size=cf_object.files.first.content_length unless cf_object.files.first.nil?
+        cf_size=@cf_connection.head_object(@container,key)[:headers]["Content-Length"] rescue Fog::Storage::Rackspace::NotFound
         fs_size=File.open(path).size
-        #puts "#{cf_size} #{fs_size} #{path}"
-        #return
-        if cf_size === fs_size then
+        puts "#{cf_size} #{fs_size}"
+        if cf_size == fs_size.to_s then
           $LOG.info("#{path} already exists")
           return
         end
@@ -95,7 +95,6 @@ class CF
           else
             object_key=key
           end
-          p options
           @cf_connection.put_object(@container,object_key,nil,options) do 
             if offset <= SEGMENT_LIMIT - BUFFER_SIZE then
               buf=file.read(BUFFER_SIZE).to_s
@@ -129,7 +128,6 @@ class CF
       options['Content-Type']="application/directory"
       @cf_connection.put_object(@container,key,nil,options)? ($LOG.info("Put file #{path} to #{@container}")):()
     end
-    p options
   rescue Exception => msg
     $LOG.error("error on #{path} #{msg.inspect}")
   end
