@@ -3,6 +3,7 @@
 require 'rubygems'
 require 'fog'
 require 'syslog'
+require 'logger'
 require 'getoptlong'
 require 'date'
 require 'thread'
@@ -21,6 +22,7 @@ $connection_settings={
 	:rackspace_region=>:ord,
 	:rackspace_auth_url  => 'https://identity.api.rackspacecloud.com/v2.0',
 }
+
 $BKP_CONTAINER='cinsay-backup-test'
 #$CF = Fog::Storage.new($connection_settings)
 $RM_DAY = 7
@@ -29,15 +31,15 @@ $LOG = Logger.new(STDOUT)
 $debug=nil
 
 class CF
-  attr_accessor :container, :sync_mode
-
+  attr_accessor :container, :sync_mode, :retention_time;
+  
   def connect(settings)
     @cf_connection=Fog::Storage.new($connection_settings)
     return @cf_connection
-  rescue ArgumentError
-    $LOG.error("Is 'CLOUDFILES USERNAME' and 'CLOUDFILES API KEY' are set as system environment variables?" )
+  #rescue ArgumentError
+  #  $LOG.error("Is 'CLOUDFILES USERNAME' and 'CLOUDFILES API KEY' are set as system environment variables?" )
   rescue Exception => msg
-    puts msg.inspect 
+     $LOG.error(msg.inspect) 
   end
   
   def set_default_container(container)
@@ -55,6 +57,11 @@ class CF
 
   def upload_file(path,objkey,container=@container)
     key=objkey.sub(/^\//,'')
+    #Set object options aka headers
+    #http://rubydoc.info/gems/fog/1.23.0/Fog/Storage/Rackspace/Real:put_object
+    options=Hash.new
+    #options['X-Delete-After']=@retention_time if @retention_time
+    options['X-Delete-At']=@retention_time if @retention_time
 
     unless File.directory?(path) then
       segments=Array.new
@@ -63,7 +70,7 @@ class CF
   
       if @sync_mode then
         #Jusr skeep existen files
-        cf_object=@cf_connection.directories.get(@container,option={:prefix=>key.sub(/^\//,'')})
+        cf_object=@cf_connection.directories.get(@container,option={:prefix=>key.sub})
         cf_size=cf_object.files.first.content_length unless cf_object.files.first.nil?
         fs_size=File.open(path).size
         #puts "#{cf_size} #{fs_size} #{path}"
@@ -74,8 +81,12 @@ class CF
         end
       end
       large_file=true if File.size(path) > SEGMENT_LIMIT
+      #Add header for static_large_object in case the object is a large object
+      #http://rubydoc.info/gems/fog/1.23.0/Fog/Storage/Rackspace/Real:put_static_obj_manifest
+      options['X-Static-Large-Object']="#{@container}/#{key}" if large_file==true
 
       File.open(path) do |file|
+
         $LOG.debug("File #{path} opened") if $debug
         segment=0
         until file.eof? do
@@ -87,7 +98,8 @@ class CF
           else
             object_key=key
           end
-          @cf_connection.put_object(@container,object_key,nil) do 
+          p options
+          @cf_connection.put_object(@container,object_key,nil,options) do 
             if offset <= SEGMENT_LIMIT - BUFFER_SIZE then
               buf=file.read(BUFFER_SIZE).to_s
               offset += buf.size
@@ -111,72 +123,19 @@ class CF
       end
       if large_file then
       #write static manifest for large file
-        @cf_connection.put_static_obj_manifest(@container,key,segments,'X-Static-Large-Object' => "#{@container}/#{key}") ? ($LOG.info("Put file #{path} to #{@container}")):()
+        @cf_connection.put_static_obj_manifest(@container,key,segments,options) ? ($LOG.info("Put file #{path} to #{@container}")):()
         #@cf_connection.put_object_manifest(@container,key.sub(/^\//,''),'X-Object-Manifest' => "#{@container}/#{key.sub(/^\//,'')}")
       end
     else
-      @cf_connection.put_object(@container,key.sub(/^\//,''),nil,{:content_type=>"application/directory"})? ($LOG.info("Put file #{path} to #{@container}")):()
+      #If Directory
+      #Add header for directory in case the object is a directory
+      options['Content-Type']="application/directory"
+      @cf_connection.put_object(@container,key,nil,options)? ($LOG.info("Put file #{path} to #{@container}")):()
     end
+    p options
   rescue Exception => msg
-    $LOG.error("error on #{path} #{msg}")
+    $LOG.error("error on #{path} #{msg.inspect}")
   end
-
-  def upload_file_f(path,key,container=@container)
-    unless File.directory?(path) then
-      if @sync_mode then
-        cf_object=@cf_connection.directories.get(@container,option={:prefix=>key.sub(/^\//,'')})
-        cf_size=cf_object.files.first.content_length unless cf_object.files.first.nil?
-        fs_size=File.open(path).size
-        #puts "#{cf_size} #{fs_size} #{path}"
-        #return
-        if cf_size === fs_size then
-          $LOG.info("#{path} already exists")
-          return
-        end
-      end
-      if  File.size(path) > SEGMENT_LIMIT then
-        $LOG.debug("Large file detected")
-        segments=Array.new
-        File.open(path) do |file|
-          $LOG.debug("File #{path} opened")
-          segment=0
-          until file.eof? do
-            segment += 1
-            offset=0
-            segment_suffix=segment.to_s.rjust(10,"0")
-            @cf_connection.put_object(@container,"#{key.sub(/^\//,'')}/#{segment_suffix}",nil) do 
-              if offset <= SEGMENT_LIMIT - BUFFER_SIZE then
-                buf=file.read(BUFFER_SIZE).to_s
-                offset += buf.size
-                $LOG.debug("chunk with #{offset} of segment #{segment_suffix} uploaded")
-                buf
-              else
-                ''
-              end
-            end
-            #Get segment metadata and put it to segments array
-            segment_head=@cf_connection.head_object(@container,"#{key.sub(/^\//,'')}/#{segment_suffix}")[:headers]
-            segments << {
-                      :size_bytes=>segment_head["Content-Length"],
-                      :etag=>segment_head["Etag"],
-                      :path=>"#{@container}/#{key.sub(/^\//,'')}/#{segment_suffix}"
-            }
-          end
-        end
-        #write manifest file
-        @cf_connection.put_static_obj_manifest(@container,key.sub(/^\//,''),segments,'X-Static-Large-Object' => "#{@container}/#{key.sub(/^\//,'')}") ? ($LOG.info("Put file #{path} to #{@container}")):()
-        #@cf_connection.put_object_manifest(@container,key.sub(/^\//,''),'X-Object-Manifest' => "#{@container}/#{key.sub(/^\//,'')}") ? ($LOG.info("Put file #{path} to #{@container.key}")):()
-      else 
-        #write file less than 5 Gb
-        @cf_connection.put_object(@container,key.sub(/^\//,''),File.open(path)) ? ($LOG.info("Put file #{path} to #{@container}")):()
-      end
-    else
-      @cf_connection.put_object(@container,key.sub(/^\//,''),nil,{:content_type=>"application/directory"})? ($LOG.info("Put file #{path} to #{@container}")):()
-    end
-  rescue Exception => msg
-    $LOG.error("error on #{path} #{msg}")
-  end
-
 
   def upload_path(path,container_key=@container)
 
@@ -272,9 +231,11 @@ class CF
   end
 
   def info(key)
-    cf_object=@cf_connection.directories.get(@container,option={:prefix=>key.sub(/^\//,'')})
-    p cf_object.files.first unless cf_object.files.first.nil?
+    #cf_object=@cf_connection.directories.get(@container,option={:prefix=>key.sub(/^\//,'')})
+    #p cf_object.files.first.head unless cf_object.files.first.nil?
     #puts cf_object
+    cf_object_head=@cf_connection.head_object(@container,key.sub(/^\//,'')).headers
+    return cf_object_head
   end
 
   def delete_object(object)
@@ -330,15 +291,32 @@ class CF
   
 end
 
+class RetentionTime
+  def self.str_to_timestamp(retention_time)
+    case retention_time[-1]
+      when "d"
+        return 24*60*60*retention_time[0...-1].to_i+Time.now.to_i
+      when "h"
+        return 60*60*retention_time[0...-1].to_i+Time.now.to_i
+      when "m"
+        return 60*retention_time[0...-1].to_i+Time.now.to_i
+      else
+        return retention_time.to_i
+    end    
+  end  
+end
+
 #Processing options
 options=GetoptLong.new(
   ['--help','-h', GetoptLong::NO_ARGUMENT],
   ['--debug','-d', GetoptLong::NO_ARGUMENT],
   ['--container-name','-c', GetoptLong::REQUIRED_ARGUMENT],
   ['--older-than','-o', GetoptLong::REQUIRED_ARGUMENT],
-  ['--sync','-s', GetoptLong::NO_ARGUMENT]
+  ['--sync','-s', GetoptLong::NO_ARGUMENT],
+  ['--retention-time','-r',GetoptLong::REQUIRED_ARGUMENT],
 )
 older_than=nil
+retention_time=nil
 container=nil
 sync=nil
 
@@ -355,11 +333,14 @@ options.each do |opt, arg|
       sync=true
     when '--debug'
       $debug=true
+    when '--retention-time'
+      retention_time=arg
   end
 end
 
 cf=CF.new
 cf.connect($connection_settings)
+cf.retention_time=RetentionTime.str_to_timestamp(retention_time) if retention_time
 
 case ARGV[0]
   when "list"
@@ -376,7 +357,7 @@ case ARGV[0]
     if (ARGV[2].nil?) and (!ARGV[1].nil?) then
       cf.upload_path(ARGV[1])
     else
-      cf.container=(ARGV[1])
+      cf.container = (ARGV[1])
       cf.sync_mode = true if sync==true
       cf.upload_path(ARGV[2])
     end
@@ -415,10 +396,13 @@ case ARGV[0]
     end
   when "info"
     if (ARGV[2].nil?) and (!ARGV[1].nil?) then
-      cf.info(ARGV[1])
+      header=cf.info(ARGV[1])
     else
       cf.container=(ARGV[1])
-      cf.info(ARGV[2])
+      header=cf.info(ARGV[2])
+    end
+    header.each do |head, value|
+      puts "#{head} => #{value}"  
     end
   when "download"
     'download'
