@@ -11,6 +11,7 @@ require 'thread'
 
 SEGMENT_LIMIT = 5368709119.0  # 5GB -1
 BUFFER_SIZE = 1024 * 1024 * 10   # 1M
+THREAD_COUNT=30
 
 #SEGMENT_LIMIT = 1024 * 1024 *100 #100M
 #BUFFER_SIZE = 1024 * 1024 * 10 #10M
@@ -23,10 +24,6 @@ $connection_settings={
 	:rackspace_auth_url  => 'https://identity.api.rackspacecloud.com/v2.0',
 }
 
-$BKP_CONTAINER='cinsay-backup-test'
-#$CF = Fog::Storage.new($connection_settings)
-$RM_DAY = 7
-$THREAD_COUNT=30
 $LOG = Logger.new(STDOUT)
 $debug=nil
 
@@ -164,7 +161,7 @@ class CF
       end
     end
     
-    $THREAD_COUNT.times do |count|
+    THREAD_COUNT.times do |count|
       threads << Thread.new(count) do |number|
         Thread.current[:number] = number
         while ! queue.empty? do
@@ -256,7 +253,7 @@ class CF
       end
     end
 
-    $THREAD_COUNT.times do |count|
+    THREAD_COUNT.times do |count|
       threads << Thread.new(count) do |number|
         Thread.current[:number] = number
         while ! queue.empty? do
