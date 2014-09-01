@@ -59,25 +59,35 @@ class CF
     options=Hash.new
     #options['X-Delete-After']=@retention_time if @retention_time
     options['X-Delete-At']=@retention_time if @retention_time
+        
+    if @sync_mode then
+      file_exists=nil
+      #Just skeep existen files
+      #cf_object=@cf_connection.directories.get(@container,option={:prefix=>key})
+      #cf_size=cf_object.files.first.content_length unless cf_object.files.first.nil?
+      if File.directory?(path) then
+      #compare than names match when type is a direcrory
+        file_exists=true unless @cf_connection.head_object(@container,key).nil?
+      else
+      #compare than size of file in CF and file in local FS is equal.
+        cf_size=@cf_connection.head_object(@container,key)[:headers]["Content-Length"] rescue Fog::Storage::Rackspace::NotFound
+        fs_size=File.size(path)
+        #puts "#{cf_size} #{fs_size}"
+        if cf_size == fs_size.to_s then
+          file_exists=true
+        end
+      end
+      if file_exists
+        $LOG.info("#{path} already exists")
+        return
+      end
+    end
 
     unless File.directory?(path) then
       segments=Array.new
       large_file=nil
       object_key=nil
-  
-      if @sync_mode then
-        #Jusr skeep existen files
-        #cf_object=@cf_connection.directories.get(@container,option={:prefix=>key})
-        #cf_size=cf_object.files.first.content_length unless cf_object.files.first.nil?
-        cf_size=@cf_connection.head_object(@container,key)[:headers]["Content-Length"] rescue Fog::Storage::Rackspace::NotFound
-        fs_size=File.open(path).size
-        #puts "#{cf_size} #{fs_size}"
-        if cf_size == fs_size.to_s then
-          $LOG.info("#{path} already exists")
-          return
-        end
-      end
-      
+            
       large_file=true if File.size(path) > SEGMENT_LIMIT
       
       File.open(path) do |file|
