@@ -137,7 +137,7 @@ class CF
       #If Directory
       #Add header for directory in case the object is a directory
       options['Content-Type']="application/directory"
-      @cf_connection.put_object(@container,key,nil,options)? ($LOG.info("Put file #{path} to #{@container}")):()
+      @cf_connection.put_object(@container,key,nil,options)? ($LOG.info("Put directory #{path} to #{@container}")):()
     end
   rescue Exception => msg
     $LOG.error("error on #{path} #{msg.inspect}")
@@ -219,7 +219,9 @@ class CF
   end
 
   def list_backups(container=@container)
-    backups=@cf_connection.directories.get(container,option={:delimiter=>'/',:limit=>1000})
+    backups=@cf_connection.directories.get(container,option={:delimiter=>"/",:limit=>1000})
+    #backups=@cf_connection.get_container(container,options={:delimiter=>"/",:limit=>1000})
+    #p backups.files
     return backups.files
   end
   
@@ -383,7 +385,7 @@ case ARGV[0]
     if not ARGV[1].nil? and ARGV[2].nil? then
       #set only name of backup
       cf.container=(ARGV[1])
-      cf.list_backups.map.each do |backup| 
+      cf.list_backups.map.each do |backup|
         puts backup.key unless backup.key.nil?
       end
     elsif (not ARGV[1].nil?) and ( not ARGV[2].nil?)
@@ -415,18 +417,4 @@ case ARGV[0]
   else
     puts "Something went wrong... :-) "
 end
-
-#container=$BKP_CONATINER
-
-#cf=CF.new
-#cf.connect($connection_settings)
-
-#cf.list_containers.map.each do |container|
-#  puts "Container name: #{container.key}\tused space: #{container.bytes}"
-#end
-
-#rt=cf.list_all_objects('cinsay-backup-test')
-#cf.delete_objects(rt)
-
-#upload_path(ARGV[0])
 
