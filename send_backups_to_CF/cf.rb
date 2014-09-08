@@ -67,7 +67,7 @@ class CF
       #cf_size=cf_object.files.first.content_length unless cf_object.files.first.nil?
       if File.directory?(path) then
       #compare than names match when type is a direcrory
-        file_exists=true unless @cf_connection.head_object(@container,key).nil?
+        file_exists=true unless @cf_connection.head_object(@container,key).nil? rescue Fog::Storage::Rackspace::NotFound
       else
       #compare than size of file in CF and file in local FS is equal.
         cf_size=@cf_connection.head_object(@container,key)[:headers]["Content-Length"] rescue Fog::Storage::Rackspace::NotFound
