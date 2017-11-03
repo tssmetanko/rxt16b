@@ -1078,3 +1078,5 @@ fi
 - fix installing extensions when %%{version} = %%{javaver}
 - add epochs to all requires and provides
 - really turn off automatic dependency generation
+
+
