@@ -10,8 +10,8 @@ function FindProxyForURL(url,host) {
       }
     }
     
-    for (var i=0; i< proxyViaHttp.length; i++){
-      if (shExpMatch(host,proxyViaHttp[i])){
+    for (var y=0; y< proxyViaHttp.length; y++){
+      if (shExpMatch(host,proxyViaHttp[y])){
         return httpProxy;
       }
     }
