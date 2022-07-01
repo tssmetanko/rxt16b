@@ -9,7 +9,7 @@ function FindProxyForURL(url,host) {
         return torProxy;
       }
     }
-    for (var y=0; y< proxyViaTOR.length; y++){
+    for (var y=0; y< proxyViaHttp.length; y++){
       if (shExpMatch(host,proxyViaHttp[y])){
         return httpProxy;
       }
